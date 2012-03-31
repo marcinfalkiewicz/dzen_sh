@@ -20,7 +20,7 @@ SCREEN_ALIGN='r'
 SEPARATOR="^fg(${FOREGROUND_ALT})::^fg()"   # WIDGET SEPARATOR
 INTERVAL=1.5                                # SLEEP INTERVAL
 
-EXECUTE=(MPD BATTERY CPUTEMP CLOCK)         # WIDGET ORDER
+EXECUTE=(NVIDIA_LSPCI MPD BATTERY CPUTEMP CLOCK)         # WIDGET ORDER
 
 DZEN_ARGS=''
 GDBAR_ARGS=''
@@ -56,6 +56,19 @@ function MPD {
             ;;
         *)
             print "[$MPD_STATE] ${MPD_CURRENT}"
+            ;;
+    esac
+}
+
+function NVIDIA_LSPCI {
+    DEVICE=$(lspci -d 10de:)
+
+    case ${DEVICE} in
+        `false`)
+            print "off"
+            ;;
+        *)
+            print "detected"
             ;;
     esac
 }

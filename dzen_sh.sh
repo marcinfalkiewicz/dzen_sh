@@ -3,7 +3,8 @@
 # generic options
 FOREGROUND='#C3C9C9'
 #FOREGROUND='#2E2E2E'
-FOREGROUND_ALT='#C5292D'
+FOREGROUND_ALT='#CCFF42'
+FOREGROUND_ERR='#FF4141'
 #BACKGROUND='#343434'
 BACKGROUND='#333232'
 FONT='Acknowledge:size=10'
@@ -20,10 +21,15 @@ SCREEN_ALIGN='r'
 SEPARATOR="^fg(${FOREGROUND_ALT})::^fg()"   # WIDGET SEPARATOR
 INTERVAL=1.5                                # SLEEP INTERVAL
 
-EXECUTE=(NVIDIA_LSPCI MPD BATTERY CPUTEMP CLOCK)         # WIDGET ORDER
+EXECUTE=(NVIDIA_LSPCI MPD WIFI BATTERY CPUTEMP CLOCK)         # WIDGET ORDER
 
 DZEN_ARGS=''
 GDBAR_ARGS=''
+
+## module vars
+
+WLAN_INTERFACE="wlan0"
+
 
 ## some functions ;)
 function CLOCK {
@@ -39,10 +45,10 @@ function CPUTEMP {
 }
 
 function BATTERY {
-    BATTERY=$(acpi -b | awk '{ print $4 }')
+    BATTERY=$(acpi -b | awk '{ print substr($4,0,length($4)-2) }')
     BT_STATE=$(awk '{ if ($1 == 1) print "AC"; else print "BT"; }' /sys/class/power_supply/AC/online)
 
-    print "${BT_STATE} ${BATTERY}"
+    print "${BT_STATE} [${BATTERY}]"
 
 }
 
@@ -51,7 +57,7 @@ function MPD {
     MPD_CURRENT=$(mpc | head -n 1)
 
     case ${MPD_STATE} in
-        `/bin/false`)
+        `false`)
             print "[stopped]"
             ;;
         *)
@@ -65,10 +71,24 @@ function NVIDIA_LSPCI {
 
     case ${DEVICE} in
         `false`)
-            print "off"
+            print "[off]"
             ;;
         *)
-            print "detected"
+            print "[on]"
+            ;;
+    esac
+}
+
+function WIFI {
+    CONNECTED=$(iwconfig ${WLAN_INTERFACE} | awk '/ESSID/ { print substr($4, 7, length($4)-10) }')
+
+    case ${CONNECTED} in
+        off)
+            print "NETWORK [^fg(${FOREGROUND_ERR})D/C^fg()]"
+            ;;
+        *)
+            CONNECTED=$(iwconfig ${WLAN_INTERFACE} | awk '/ESSID/ { print substr($4, 8, length($4)-8) }')
+            print "NETWORK [^fg(${FOREGROUND_ALT})${CONNECTED}^fg()]"
             ;;
     esac
 }

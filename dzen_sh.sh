@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 
 # generic options
 FOREGROUND='#C3C9C9'
@@ -6,13 +6,13 @@ FOREGROUND='#C3C9C9'
 FOREGROUND_ALT='#CCFF42'
 FOREGROUND_ERR='#FF4141'
 #BACKGROUND='#343434'
-BACKGROUND='#333232'
+BACKGROUND='#1B1D1E'
 FONT='Acknowledge:size=10'
 
-GEOMETRY='+0-0'
-WIDTH=
+#GEOMETRY=''
+#WIDTH=
 HEIGHT=12
-EXPAND='left'
+#EXPAND='right'
 TEXT_ALIGN='r'
 SCREEN_ALIGN='r'
 
@@ -21,9 +21,9 @@ SCREEN_ALIGN='r'
 SEPARATOR="^fg(${FOREGROUND_ALT})::^fg()"   # WIDGET SEPARATOR
 INTERVAL=1.5                                # SLEEP INTERVAL
 
-EXECUTE=(NVIDIA_LSPCI MPD WIFI BATTERY CPUTEMP CLOCK)         # WIDGET ORDER
+EXECUTE=(WIFI BATTERY ALSA CPUTEMP CLOCK)         # WIDGET ORDER
 
-DZEN_ARGS=''
+DZEN_ARGS='-dock ' # -expand "${EXPAND}" -geometry "${GEOMETRY}"
 GDBAR_ARGS=''
 
 ## module vars
@@ -36,19 +36,19 @@ function CLOCK {
     ## [day] [month] [year], [hour]:[minutes]    
 
     CLOCK=$(date +"%d %b %y, %H:%M")
-    print "${CLOCK}"
+    echo "${CLOCK}"
 }
 
 function CPUTEMP {
-    CORETEMP=$(awk '{ print substr($1,0,length($1)-3) }' /sys/class/hwmon/hwmon*/temp1_input)
-    print "${CORETEMP}°C"
+    CORETEMP=$(awk '{ print substr($1,0,length($1)-3) }' /sys/devices/virtual/thermal/thermal_zone0/temp)
+    echo "${CORETEMP}°C"
 }
 
 function BATTERY {
     BATTERY=$(acpi -b | awk '{ print substr($4,0,length($4)-2) }')
     BT_STATE=$(awk '{ if ($1 == 1) print "AC"; else print "BT"; }' /sys/class/power_supply/AC/online)
 
-    print "${BT_STATE} [${BATTERY}]"
+    echo "${BT_STATE} [${BATTERY}]"
 
 }
 
@@ -58,10 +58,10 @@ function MPD {
 
     case ${MPD_STATE} in
         `false`)
-            print "[stopped]"
+            echo "[stopped]"
             ;;
         *)
-            print "[$MPD_STATE] ${MPD_CURRENT}"
+            echo "[$MPD_STATE] ${MPD_CURRENT}"
             ;;
     esac
 }
@@ -71,10 +71,10 @@ function NVIDIA_LSPCI {
 
     case ${DEVICE} in
         `false`)
-            print "[off]"
+            echo "[off]"
             ;;
         *)
-            print "[on]"
+            echo "[on]"
             ;;
     esac
 }
@@ -84,11 +84,25 @@ function WIFI {
 
     case ${CONNECTED} in
         off)
-            print "NETWORK [^fg(${FOREGROUND_ERR})D/C^fg()]"
+            echo "NETWORK [^fg(${FOREGROUND_ERR})D/C^fg()]"
             ;;
         *)
             CONNECTED=$(iwconfig ${WLAN_INTERFACE} | awk '/ESSID/ { print substr($4, 8, length($4)-8) }')
-            print "NETWORK [^fg(${FOREGROUND_ALT})${CONNECTED}^fg()]"
+            echo "NETWORK [^fg(${FOREGROUND_ALT})${CONNECTED}^fg()]"
+            ;;
+    esac
+}
+
+function ALSA {
+    VOLUME=$(amixer -c0 get Master | awk '/^  Mono/ { print $4 }' | tr -d [=[=]-[=]=] | tr -d [%])
+    VOLUME_STAT=$(amixer -c0 get Master | awk '/^  Mono/ { print $6 }' | tr -d [=[=]-[=]=] | tr -d [%])
+
+    case "${VOLUME_STAT}" in
+        off)
+            echo "VOL [0]"
+            ;;
+        *)
+            echo "VOL [${VOLUME}]"
             ;;
     esac
 }
@@ -96,14 +110,13 @@ function WIFI {
 # execute
 while true
 do
-    #for ((index=0; index < ${#EXECUTE[@]}; index++))
-    for index in {1..${#EXECUTE[@]}..1}
+    for ((index=0; index < ${#EXECUTE[@]}; index++))
+#    for index in {1..${#EXECUTE[@]}..1}
+#    for index in ${EXECUTE[@]:0}
     do
-        print -n " ${SEPARATOR} `${EXECUTE[index]}`"
+        echo -n "^pa(;-3) ${SEPARATOR} `${EXECUTE[index]}`^pa()"
     done
 
-    print --
-
+    echo
     sleep $INTERVAL
-done | dzen2 -fg "${FOREGROUND}" -bg "${BACKGROUND}" -fn "${FONT}" -h "${HEIGHT}" -expand "${EXPAND}" -ta "${TEXT_ALIGN}" -sa "${SCREEN_ALIGN}" -title-name "dzen-ng" ${DZEN_ARGS}
-
+done | dzen2 -fg "${FOREGROUND}" -bg "${BACKGROUND}" -fn "${FONT}" -h "${HEIGHT}" -ta "${TEXT_ALIGN}" -sa "${SCREEN_ALIGN}" -title-name "dzen-ng" ${DZEN_ARGS}
